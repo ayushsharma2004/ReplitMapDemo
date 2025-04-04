@@ -8,26 +8,24 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
 });
 
-export const countries = pgTable("countries", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  status: text("status").notNull(),
-  active: boolean("active").notNull().default(false),
-});
-
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
 });
 
-export const insertCountrySchema = createInsertSchema(countries).pick({
-  name: true,
-  status: true,
-  active: true,
-});
-
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
-export type InsertCountry = z.infer<typeof insertCountrySchema>;
-export type Country = typeof countries.$inferSelect;
+export interface CountryData {
+  country: string;
+  leagueStatus: string;
+  active: boolean;
+}
+
+export const countrySchema = z.object({
+  country: z.string(),
+  leagueStatus: z.string(),
+  active: z.boolean(),
+});
+
+export const countryDataSchema = z.array(countrySchema);

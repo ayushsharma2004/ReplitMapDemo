@@ -1,4 +1,4 @@
-import { users, type User, type InsertUser, countries, type Country, type InsertCountry } from "@shared/schema";
+import { users, type User, type InsertUser, type CountryData } from "@shared/schema";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -7,27 +7,35 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
-  getCountries(): Promise<Country[]>;
-  getCountry(id: number): Promise<Country | undefined>;
-  getCountryByName(name: string): Promise<Country | undefined>;
-  createCountry(country: InsertCountry): Promise<Country>;
-  updateCountry(id: number, country: Partial<InsertCountry>): Promise<Country | undefined>;
-  deleteCountry(id: number): Promise<boolean>;
-  updateCountriesData(countriesData: InsertCountry[]): Promise<Country[]>;
+  getCountries(): CountryData[];
+  updateCountries(countries: CountryData[]): CountryData[];
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
-  private countriesMap: Map<number, Country>;
-  currentUserId: number;
-  currentCountryId: number;
+  private countries: CountryData[];
+  currentId: number;
 
   constructor() {
     this.users = new Map();
-    this.countriesMap = new Map();
-    this.currentUserId = 1;
-    this.currentCountryId = 1;
+    this.currentId = 1;
+    this.countries = [
+      { country: "United States", leagueStatus: "Premier", active: true },
+      { country: "Canada", leagueStatus: "Standard", active: true },
+      { country: "United Kingdom", leagueStatus: "Premier", active: true },
+      { country: "France", leagueStatus: "Premier", active: true },
+      { country: "Germany", leagueStatus: "Premier", active: true },
+      { country: "Japan", leagueStatus: "Standard", active: true },
+      { country: "Australia", leagueStatus: "Standard", active: true },
+      { country: "Brazil", leagueStatus: "Premier", active: true },
+      { country: "Russia", leagueStatus: "Basic", active: false },
+      { country: "India", leagueStatus: "Standard", active: true },
+      { country: "China", leagueStatus: "Basic", active: false },
+      { country: "South Africa", leagueStatus: "Standard", active: true },
+      { country: "Mexico", leagueStatus: "Standard", active: true },
+      { country: "Italy", leagueStatus: "Premier", active: true },
+      { country: "Spain", leagueStatus: "Premier", active: true }
+    ];
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -41,59 +49,19 @@ export class MemStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
+    const id = this.currentId++;
     const user: User = { ...insertUser, id };
     this.users.set(id, user);
     return user;
   }
-  
-  async getCountries(): Promise<Country[]> {
-    return Array.from(this.countriesMap.values());
+
+  getCountries(): CountryData[] {
+    return [...this.countries];
   }
-  
-  async getCountry(id: number): Promise<Country | undefined> {
-    return this.countriesMap.get(id);
-  }
-  
-  async getCountryByName(name: string): Promise<Country | undefined> {
-    return Array.from(this.countriesMap.values()).find(
-      (country) => country.name.toLowerCase() === name.toLowerCase(),
-    );
-  }
-  
-  async createCountry(insertCountry: InsertCountry): Promise<Country> {
-    const id = this.currentCountryId++;
-    const country: Country = { ...insertCountry, id };
-    this.countriesMap.set(id, country);
-    return country;
-  }
-  
-  async updateCountry(id: number, countryData: Partial<InsertCountry>): Promise<Country | undefined> {
-    const country = this.countriesMap.get(id);
-    if (!country) return undefined;
-    
-    const updatedCountry: Country = { ...country, ...countryData };
-    this.countriesMap.set(id, updatedCountry);
-    return updatedCountry;
-  }
-  
-  async deleteCountry(id: number): Promise<boolean> {
-    return this.countriesMap.delete(id);
-  }
-  
-  async updateCountriesData(countriesData: InsertCountry[]): Promise<Country[]> {
-    // Clear existing countries
-    this.countriesMap.clear();
-    this.currentCountryId = 1;
-    
-    // Add new countries
-    const countries: Country[] = [];
-    for (const countryData of countriesData) {
-      const country = await this.createCountry(countryData);
-      countries.push(country);
-    }
-    
-    return countries;
+
+  updateCountries(countries: CountryData[]): CountryData[] {
+    this.countries = [...countries];
+    return this.countries;
   }
 }
 
