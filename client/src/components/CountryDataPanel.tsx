@@ -35,7 +35,7 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
   };
 
   return (
-    <div className="w-80 border-l border-border overflow-y-auto hidden md:block">
+    <div className="w-80 border-l border-border overflow-y-auto hidden md:block bg-gray-50">
       <div className="p-4">
         <h2 className="text-lg font-semibold mb-4">Country Data</h2>
         
@@ -46,7 +46,7 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
             <textarea 
               value={jsonInput}
               onChange={(e) => setJsonInput(e.target.value)}
-              className="w-full bg-background border border-border rounded p-2 text-sm font-mono h-64"
+              className="w-full bg-white border border-gray-300 rounded p-2 text-sm font-mono h-64 shadow-sm"
               placeholder={`[
   {
     "country": "United States",
@@ -65,12 +65,12 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
         
         <button 
           onClick={handleApplyData}
-          className="w-full bg-primary hover:bg-primary/90 text-white font-medium rounded px-4 py-2 mb-4">
+          className="w-full bg-primary hover:bg-primary/90 text-white font-medium rounded px-4 py-2 mb-4 shadow-sm">
           Apply Data to Map
         </button>
         
         {/* Map Legend */}
-        <div className="border border-border rounded p-3">
+        <div className="border border-gray-200 rounded p-3 bg-white shadow-sm">
           <h3 className="text-sm font-medium mb-2">Map Legend</h3>
           <div className="space-y-2 text-sm">
             <div className="flex items-center">
@@ -78,11 +78,11 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
               <span>Active Country</span>
             </div>
             <div className="flex items-center">
-              <div className="w-4 h-4 bg-accent rounded mr-2"></div>
+              <div className="w-4 h-4 bg-gray-200 rounded mr-2"></div>
               <span>Inactive Country</span>
             </div>
             <div className="flex items-center">
-              <div className="w-4 h-4 border border-muted-foreground rounded mr-2"></div>
+              <div className="w-4 h-4 border border-gray-400 rounded mr-2 bg-gray-100"></div>
               <span>No Data</span>
             </div>
           </div>
@@ -92,12 +92,12 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
         <div className="mt-4">
           <h3 className="text-sm font-medium mb-2">Statistics</h3>
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-secondary p-2 rounded">
-              <div className="text-xs text-muted-foreground">Total Countries</div>
+            <div className="bg-white p-3 rounded shadow-sm border border-gray-200">
+              <div className="text-xs text-gray-500">Total Countries</div>
               <div className="text-lg font-semibold">{stats.totalCountries}</div>
             </div>
-            <div className="bg-secondary p-2 rounded">
-              <div className="text-xs text-muted-foreground">Active Countries</div>
+            <div className="bg-white p-3 rounded shadow-sm border border-gray-200">
+              <div className="text-xs text-gray-500">Active Countries</div>
               <div className="text-lg font-semibold text-primary">{stats.activeCountries}</div>
             </div>
           </div>

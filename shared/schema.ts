@@ -22,6 +22,11 @@ export interface CountryData {
   active: boolean;
 }
 
+// Country type with ID (used in some components for uniqueness)
+export interface Country extends CountryData {
+  id: number;
+}
+
 export const countrySchema = z.object({
   country: z.string(),
   leagueStatus: z.string(),

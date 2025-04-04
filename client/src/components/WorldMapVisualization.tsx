@@ -8,8 +8,8 @@ import {
 import { CountryData } from "@shared/schema";
 import CountryTooltip from "./CountryTooltip";
 
-// World map topojson file from react-simple-maps
-const geoUrl = "https://raw.githubusercontent.com/deldersveld/topojson/master/world-countries.json";
+// World map topojson file from react-simple-maps (using a reliable source)
+const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
 interface WorldMapVisualizationProps {
   countryData: CountryData[];
@@ -37,7 +37,7 @@ export default function WorldMapVisualization({
       .replace("Democratic People's Republic of Korea", "North Korea")
       .replace("United Republic of Tanzania", "Tanzania")
       .replace("Russian Federation", "Russia")
-      .replace("United Kingdom of Great Britain and Northern Ireland", "United Kingdom")
+      .replace("United Kingdom", "United Kingdom")
       .replace("Iran (Islamic Republic of)", "Iran")
       .replace("Syrian Arab Republic", "Syria")
       .replace("Viet Nam", "Vietnam")
@@ -90,11 +90,11 @@ export default function WorldMapVisualization({
   };
 
   return (
-    <div ref={mapContainerRef} className="flex-1 relative">
+    <div ref={mapContainerRef} className="flex-1 relative flex items-center justify-center h-full">
       {/* Loading placeholder */}
       {isMapLoading && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="rounded-lg bg-secondary p-8 text-center max-w-md">
+        <div className="absolute inset-0 flex items-center justify-center z-10">
+          <div className="rounded-lg bg-secondary p-8 text-center max-w-md shadow-md">
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-4 text-primary">
               <circle cx="12" cy="12" r="10"></circle>
               <line x1="2" y1="12" x2="22" y2="12"></line>
@@ -110,63 +110,66 @@ export default function WorldMapVisualization({
       )}
       
       {/* World map */}
-      <ComposableMap 
-        projection="geoMercator"
-        projectionConfig={{
-          scale: 140,
-        }}
-        style={{
-          width: "100%",
-          height: "100%",
-        }}
-      >
-        <ZoomableGroup center={[0, 0]} zoom={1}>
-          <Geographies geography={geoUrl}>
-            {({ geographies }) =>
-              geographies.map((geo) => {
-                const countryName = geo.properties.name;
-                const country = getCountryDataByName(countryName);
-                
-                // Determine country fill color
-                let fillColor = "#383838"; // Default inactive/no data color
-                
-                if (country) {
-                  fillColor = country.active ? "#3D7FD9" : "#383838";
-                }
-                
-                return (
-                  <Geography
-                    key={geo.rsmKey}
-                    geography={geo}
-                    onMouseEnter={(event) => handleCountryHover(geo, event)}
-                    onMouseLeave={handleMouseLeave}
-                    style={{
-                      default: {
-                        fill: fillColor,
-                        stroke: "#1E1E1E",
-                        strokeWidth: 0.5,
-                        outline: "none",
-                      },
-                      hover: {
-                        fill: country?.active ? "#5491E1" : "#4A4A4A",
-                        stroke: "#1E1E1E",
-                        strokeWidth: 0.5,
-                        outline: "none",
-                      },
-                      pressed: {
-                        fill: country?.active ? "#2D6BC9" : "#303030",
-                        stroke: "#1E1E1E",
-                        strokeWidth: 0.5,
-                        outline: "none",
-                      },
-                    }}
-                  />
-                );
-              })
-            }
-          </Geographies>
-        </ZoomableGroup>
-      </ComposableMap>
+      <div className="w-full h-full">
+        <ComposableMap 
+          projection="geoEquirectangular"
+          projectionConfig={{
+            scale: 150,
+          }}
+          style={{
+            width: "100%",
+            height: "100%",
+          }}
+        >
+          <ZoomableGroup center={[0, 0]} zoom={1}>
+            <Geographies geography={geoUrl}>
+              {({ geographies }) =>
+                geographies.map((geo) => {
+                  const countryName = geo.properties.name;
+                  const country = getCountryDataByName(countryName);
+                  
+                  // Determine country fill color
+                  let fillColor = "#e0e0e0"; // Default inactive/no data color for light theme
+                  let strokeColor = "#c0c0c0"; // Default stroke color for light theme
+                  
+                  if (country) {
+                    fillColor = country.active ? "#3D7FD9" : "#e0e0e0";
+                  }
+                  
+                  return (
+                    <Geography
+                      key={geo.rsmKey}
+                      geography={geo}
+                      onMouseEnter={(event) => handleCountryHover(geo, event)}
+                      onMouseLeave={handleMouseLeave}
+                      style={{
+                        default: {
+                          fill: fillColor,
+                          stroke: strokeColor,
+                          strokeWidth: 0.5,
+                          outline: "none",
+                        },
+                        hover: {
+                          fill: country?.active ? "#5491E1" : "#cccccc",
+                          stroke: strokeColor,
+                          strokeWidth: 0.5,
+                          outline: "none",
+                        },
+                        pressed: {
+                          fill: country?.active ? "#2D6BC9" : "#bbbbbb",
+                          stroke: strokeColor,
+                          strokeWidth: 0.5,
+                          outline: "none",
+                        },
+                      }}
+                    />
+                  );
+                })
+              }
+            </Geographies>
+          </ZoomableGroup>
+        </ComposableMap>
+      </div>
       
       {/* Country tooltip */}
       <CountryTooltip countryInfo={tooltipInfo} position={tooltipPosition} />
