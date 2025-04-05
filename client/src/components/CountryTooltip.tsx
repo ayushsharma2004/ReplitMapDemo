@@ -7,20 +7,39 @@ interface CountryTooltipProps {
 }
 
 export default function CountryTooltip({ countryInfo, position }: CountryTooltipProps) {
+  // Safety check for null or undefined props
   if (!countryInfo || !position) return null;
 
-  let leagueStatusColor = "bg-gray-500";
-  if (countryInfo.leagueStatus === "Premier") {
-    leagueStatusColor = "bg-primary";
-  } else if (countryInfo.leagueStatus === "Standard") {
-    leagueStatusColor = "bg-blue-400";
-  } else if (countryInfo.leagueStatus === "Basic") {
-    leagueStatusColor = "bg-gray-400";
+  // Validate countryInfo has required properties
+  const isValidCountryInfo = 
+    countryInfo && 
+    typeof countryInfo.country === 'string' && 
+    typeof countryInfo.leagueStatus === 'string' &&
+    typeof countryInfo.active === 'boolean';
+
+  if (!isValidCountryInfo) {
+    console.error("Invalid country data in tooltip:", countryInfo);
+    return null;
   }
 
+  // Determine league status color with fallback
+  let leagueStatusColor = "bg-gray-500";
+  try {
+    if (countryInfo.leagueStatus === "Premier") {
+      leagueStatusColor = "bg-primary";
+    } else if (countryInfo.leagueStatus === "Standard") {
+      leagueStatusColor = "bg-blue-400";
+    } else if (countryInfo.leagueStatus === "Basic") {
+      leagueStatusColor = "bg-gray-400";
+    }
+  } catch (error) {
+    console.error("Error processing league status:", error);
+  }
+
+  // Calculate tooltip position with safety checks
   const tooltipStyle = {
-    left: `${position.x}px`,
-    top: `${position.y}px`,
+    left: `${Math.max(0, position.x)}px`,
+    top: `${Math.max(0, position.y)}px`,
   };
 
   return (
@@ -28,11 +47,11 @@ export default function CountryTooltip({ countryInfo, position }: CountryTooltip
       className="absolute bg-white border border-border rounded shadow-lg p-3 text-sm z-10"
       style={tooltipStyle}
     >
-      <h4 className="font-semibold mb-1">{countryInfo.country}</h4>
+      <h4 className="font-semibold mb-1">{countryInfo.country || "Unknown Country"}</h4>
       <div className="flex items-center text-xs text-gray-600 mb-1">
         <span className="mr-2">Status:</span>
         <span className={`px-2 py-0.5 rounded text-white ${leagueStatusColor}`}>
-          {countryInfo.leagueStatus}
+          {countryInfo.leagueStatus || "Unknown"}
         </span>
       </div>
       <div className="flex items-center text-xs text-gray-600">

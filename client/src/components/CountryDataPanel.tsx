@@ -17,18 +17,60 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
 
   const handleApplyData = () => {
     try {
-      const data = JSON.parse(jsonInput) as CountryData[];
-      onDataUpdate(data);
+      // Attempt to parse the JSON data
+      const parsedData = JSON.parse(jsonInput);
       
-      toast({
-        title: "Success",
-        description: "Map data updated successfully",
-        variant: "default",
+      // Validate that the parsed data is an array
+      if (!Array.isArray(parsedData)) {
+        toast({
+          title: "Error",
+          description: "Data must be an array of country objects",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Validate each country object has the required fields
+      const validData = parsedData.filter(item => {
+        return (
+          item && 
+          typeof item === 'object' && 
+          typeof item.country === 'string' && 
+          typeof item.leagueStatus === 'string' && 
+          typeof item.active === 'boolean'
+        );
       });
+      
+      // Check if any items were filtered out due to validation
+      if (validData.length !== parsedData.length) {
+        toast({
+          title: "Warning",
+          description: `${parsedData.length - validData.length} invalid entries were removed`,
+          variant: "default",
+        });
+      }
+      
+      // Only proceed if we have valid data
+      if (validData.length > 0) {
+        onDataUpdate(validData);
+        
+        toast({
+          title: "Success",
+          description: `Map updated with ${validData.length} countries`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "No valid country data found",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
+      console.error("JSON parsing error:", error);
       toast({
         title: "Error",
-        description: "Invalid JSON format",
+        description: "Invalid JSON format. Please check your input.",
         variant: "destructive",
       });
     }

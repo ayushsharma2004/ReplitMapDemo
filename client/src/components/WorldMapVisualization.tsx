@@ -27,25 +27,37 @@ export default function WorldMapVisualization({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
 
-  // Get country data by name, handling variations in country naming
-  const getCountryDataByName = (countryName: string): CountryData | undefined => {
-    // Handle common name variations
-    const normalizedName = countryName
-      .replace("United States of America", "United States")
-      .replace("The Bahamas", "Bahamas")
-      .replace("Republic of Korea", "South Korea")
-      .replace("Democratic People's Republic of Korea", "North Korea")
-      .replace("United Republic of Tanzania", "Tanzania")
-      .replace("Russian Federation", "Russia")
-      .replace("United Kingdom", "United Kingdom")
-      .replace("Iran (Islamic Republic of)", "Iran")
-      .replace("Syrian Arab Republic", "Syria")
-      .replace("Viet Nam", "Vietnam")
-      .replace("Brunei Darussalam", "Brunei");
+  // Get country data by name, handling variations in country naming with improved error handling
+  const getCountryDataByName = (countryName: string | undefined): CountryData | undefined => {
+    // Handle empty or undefined country names
+    if (!countryName) return undefined;
+    
+    try {
+      // Handle common name variations
+      const normalizedName = countryName
+        .replace("United States of America", "United States")
+        .replace("The Bahamas", "Bahamas")
+        .replace("Republic of Korea", "South Korea")
+        .replace("Democratic People's Republic of Korea", "North Korea")
+        .replace("United Republic of Tanzania", "Tanzania")
+        .replace("Russian Federation", "Russia")
+        .replace("United Kingdom", "United Kingdom")
+        .replace("Iran (Islamic Republic of)", "Iran")
+        .replace("Syrian Arab Republic", "Syria")
+        .replace("Viet Nam", "Vietnam")
+        .replace("Brunei Darussalam", "Brunei");
 
-    return countryData.find(
-      (country) => country.country.toLowerCase() === normalizedName.toLowerCase()
-    );
+      // Ensure countryData is an array before using find
+      if (!Array.isArray(countryData)) return undefined;
+      
+      return countryData.find(
+        (country) => country && country.country && 
+        country.country.toLowerCase() === normalizedName.toLowerCase()
+      );
+    } catch (error) {
+      console.error("Error processing country data:", error);
+      return undefined;
+    }
   };
 
   // Handle map loading
@@ -123,9 +135,9 @@ export default function WorldMapVisualization({
         >
           <ZoomableGroup center={[0, 0]} zoom={1}>
             <Geographies geography={geoUrl}>
-              {({ geographies }) =>
-                geographies.map((geo) => {
-                  const countryName = geo.properties.name;
+              {({ geographies }: { geographies: any[] }) =>
+                geographies.map((geo: any) => {
+                  const countryName = geo.properties?.name;
                   const country = getCountryDataByName(countryName);
                   
                   // Determine country fill color
@@ -138,9 +150,9 @@ export default function WorldMapVisualization({
                   
                   return (
                     <Geography
-                      key={geo.rsmKey}
+                      key={geo.rsmKey || `geo-${Math.random().toString(36).substr(2, 9)}`}
                       geography={geo}
-                      onMouseEnter={(event) => handleCountryHover(geo, event)}
+                      onMouseEnter={(event: React.MouseEvent<SVGPathElement>) => handleCountryHover(geo, event)}
                       onMouseLeave={handleMouseLeave}
                       style={{
                         default: {

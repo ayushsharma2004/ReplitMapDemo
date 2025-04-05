@@ -56,12 +56,54 @@ export class MemStorage implements IStorage {
   }
 
   getCountries(): CountryData[] {
-    return [...this.countries];
+    try {
+      // Create a defensive copy of the data to avoid external modification
+      if (!this.countries || !Array.isArray(this.countries)) {
+        console.error("Invalid countries data structure");
+        return [];
+      }
+      
+      // Return only valid country objects
+      return [...this.countries].filter(country => 
+        country && 
+        typeof country.country === 'string' && 
+        typeof country.leagueStatus === 'string' && 
+        typeof country.active === 'boolean'
+      );
+    } catch (error) {
+      console.error("Error retrieving countries:", error);
+      return []; // Return empty array on error
+    }
   }
 
   updateCountries(countries: CountryData[]): CountryData[] {
-    this.countries = [...countries];
-    return this.countries;
+    try {
+      // Validate input is an array
+      if (!countries || !Array.isArray(countries)) {
+        console.error("Invalid data provided: not an array");
+        return this.getCountries(); // Return current data
+      }
+      
+      // Filter out invalid country objects
+      const validCountries = countries.filter(country => 
+        country && 
+        typeof country.country === 'string' && 
+        typeof country.leagueStatus === 'string' && 
+        typeof country.active === 'boolean'
+      );
+      
+      if (validCountries.length === 0) {
+        console.warn("No valid country data provided for update");
+        return this.getCountries(); // Return current data
+      }
+      
+      // Update with validated data
+      this.countries = [...validCountries];
+      return this.getCountries();
+    } catch (error) {
+      console.error("Error updating countries:", error);
+      return this.getCountries(); // Return current data on error
+    }
   }
 }
 
