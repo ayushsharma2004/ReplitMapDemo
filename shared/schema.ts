@@ -24,6 +24,30 @@ export interface PatentApplication {
   legal_status: 'active' | 'not_active';
 }
 
+// PubChem API response structure
+export interface PubChemResponse {
+  pubchemResults: {
+    currentCompound: {
+      cid: number;
+      recordTitle: string;
+      smile: string;
+    };
+    patents: Array<{
+      applications: PatentApplication[];
+      country_code: string;
+      country_name: string;
+      expiration_date: string;
+      kind_code: string;
+      patent_id: string;
+      patent_number: string;
+      patent_status: string;
+      source: string;
+      url: string;
+    }>;
+  };
+  success: boolean;
+}
+
 // Our standard country data format used in the application
 export interface CountryData {
   country: string;
@@ -44,6 +68,49 @@ export const patentApplicationSchema = z.object({
 });
 
 export const patentApplicationsSchema = z.array(patentApplicationSchema);
+
+// Schema for validating the PubChem response format
+export const pubChemResponseSchema = z.object({
+  pubchemResults: z.object({
+    currentCompound: z.object({
+      cid: z.number(),
+      recordTitle: z.string(),
+      smile: z.string()
+    }),
+    patents: z.array(
+      z.object({
+        applications: z.array(patentApplicationSchema),
+        country_code: z.string(),
+        country_name: z.string(),
+        expiration_date: z.string(),
+        kind_code: z.string(),
+        patent_id: z.string(),
+        patent_number: z.string(),
+        patent_status: z.string(),
+        source: z.string(),
+        url: z.string()
+      })
+    )
+  }),
+  success: z.boolean()
+});
+
+// Helper function to extract patent applications from PubChem response
+export const extractPatentApplicationsFromPubChem = (data: PubChemResponse): PatentApplication[] => {
+  if (!data || !data.pubchemResults || !data.pubchemResults.patents) {
+    return [];
+  }
+  
+  // Flatten all applications from all patents
+  const applications: PatentApplication[] = [];
+  data.pubchemResults.patents.forEach(patent => {
+    if (patent.applications && Array.isArray(patent.applications)) {
+      applications.push(...patent.applications);
+    }
+  });
+  
+  return applications;
+};
 
 export const countrySchema = z.object({
   country: z.string(),
