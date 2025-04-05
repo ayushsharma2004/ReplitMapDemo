@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { 
-  CountryData, 
-  countrySchema,
-  PatentApplication, 
-  convertPatentApplicationsToCountryData,
-  pubChemResponseSchema,
-  extractPatentApplicationsFromPubChem,
-  PubChemResponse
-} from "@shared/schema";
+import { CountryData, countrySchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 interface CountryDataPanelProps {
@@ -125,185 +117,89 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
       // Try to parse the JSON
       const parsedData = JSON.parse(jsonInput);
       
-      // Check if this is PubChem data format with nested structure
-      const isPubChemFormat = parsedData && 
-                              typeof parsedData === 'object' && 
-                              parsedData.pubchemResults && 
-                              parsedData.pubchemResults.patents;
-      
-      let countryData: CountryData[] = [];
-      
-      if (isPubChemFormat) {
-        // Process PubChem format
-        try {
-          // Extract applications from PubChem format
-          const applications = extractPatentApplicationsFromPubChem(parsedData as PubChemResponse);
-          
-          if (applications.length === 0) {
-            toast({
-              title: "Error",
-              description: "No patent applications found in the PubChem data",
-              variant: "destructive",
-            });
-            return;
-          }
-          
-          // Convert applications to country data
-          countryData = convertPatentApplicationsToCountryData(applications);
-          
-          toast({
-            title: "Success",
-            description: `Processed PubChem data with ${applications.length} patent applications into ${countryData.length} countries`,
-            variant: "default",
-          });
-        } catch (error) {
-          console.error("Error processing PubChem data:", error);
-          toast({
-            title: "Error",
-            description: "Failed to process PubChem data",
-            variant: "destructive",
-          });
-          return;
-        }
-      } else if (Array.isArray(parsedData)) {
-        // Check if it's an array of patent applications
-        const isPatentFormat = parsedData.length > 0 && 
-          typeof parsedData[0] === 'object' && 
-          parsedData[0] !== null &&
-          'country_code' in parsedData[0] && 
-          'legal_status' in parsedData[0];
-        
-        if (isPatentFormat) {
-          // Handle patent application format
-          try {
-            // Validate patent format
-            const validPatentData = parsedData.filter(item => 
-              item && 
-              typeof item === 'object' &&
-              typeof item.country_code === 'string' && 
-              typeof item.legal_status === 'string' &&
-              (item.legal_status === 'active' || item.legal_status === 'not_active')
-            );
-            
-            if (validPatentData.length === 0) {
-              toast({
-                title: "Error",
-                description: "No valid patent application data found",
-                variant: "destructive",
-              });
-              return;
-            }
-            
-            // Convert patent applications to our country data format
-            countryData = convertPatentApplicationsToCountryData(validPatentData as PatentApplication[]);
-            
-            toast({
-              title: "Success",
-              description: `Converted ${validPatentData.length} patent applications to ${countryData.length} countries`,
-              variant: "default",
-            });
-          } catch (error) {
-            console.error("Error converting patent data:", error);
-            toast({
-              title: "Error",
-              description: "Failed to process patent application data",
-              variant: "destructive",
-            });
-            return;
-          }
-        } else {
-          // Handle direct country data format
-          // Initialize counters for validation reporting
-          let validCount = 0;
-          let invalidCount = 0;
-          let emptyCount = 0;
-          let duplicateCount = 0;
-          
-          // Track country names to check for duplicates
-          const countryNames = new Set<string>();
-          
-          // Validate each country object has the required fields
-          countryData = parsedData.filter(item => {
-            // Skip null or non-object items
-            if (!item || typeof item !== 'object') {
-              invalidCount++;
-              return false;
-            }
-            
-            // Skip empty objects
-            if (Object.keys(item).length === 0) {
-              emptyCount++;
-              return false;
-            }
-            
-            // Check required properties
-            const isValid = (
-              typeof item.country === 'string' && 
-              item.country.trim() !== '' &&
-              typeof item.leagueStatus === 'string' && 
-              typeof item.active === 'boolean'
-            );
-            
-            if (!isValid) {
-              invalidCount++;
-              return false;
-            }
-            
-            // Check for duplicates
-            if (countryNames.has(item.country.toLowerCase())) {
-              duplicateCount++;
-              return false;
-            }
-            
-            // Add to tracking set if valid
-            countryNames.add(item.country.toLowerCase());
-            validCount++;
-            return true;
-          });
-          
-          // Build detailed validation message
-          let validationMessage = `${validCount} valid countries`;
-          const issues = [];
-          
-          if (invalidCount > 0) issues.push(`${invalidCount} invalid entries`);
-          if (emptyCount > 0) issues.push(`${emptyCount} empty objects`);
-          if (duplicateCount > 0) issues.push(`${duplicateCount} duplicates`);
-          
-          if (issues.length > 0) {
-            validationMessage += ` (removed: ${issues.join(", ")})`;
-          }
-          
-          if (countryData.length > 0) {
-            toast({
-              title: "Success",
-              description: `Map updated with ${validationMessage}`,
-              variant: "default",
-            });
-          } else {
-            toast({
-              title: "Error",
-              description: "No valid country data found",
-              variant: "destructive",
-            });
-            return;
-          }
-        }
-      } else {
+      // Check if it's an array
+      if (!Array.isArray(parsedData)) {
         toast({
           title: "Error",
-          description: "Unsupported data format. Please check the schema information below.",
+          description: "Data must be an array of country objects",
           variant: "destructive",
         });
         return;
       }
       
+      // Initialize counters for validation reporting
+      let validCount = 0;
+      let invalidCount = 0;
+      let emptyCount = 0;
+      let duplicateCount = 0;
+      
+      // Track country names to check for duplicates
+      const countryNames = new Set<string>();
+      
+      // Validate each country object has the required fields
+      const validData = parsedData.filter(item => {
+        // Skip null or non-object items
+        if (!item || typeof item !== 'object') {
+          invalidCount++;
+          return false;
+        }
+        
+        // Skip empty objects
+        if (Object.keys(item).length === 0) {
+          emptyCount++;
+          return false;
+        }
+        
+        // Check required properties
+        const isValid = (
+          typeof item.country === 'string' && 
+          item.country.trim() !== '' &&
+          typeof item.leagueStatus === 'string' && 
+          typeof item.active === 'boolean'
+        );
+        
+        if (!isValid) {
+          invalidCount++;
+          return false;
+        }
+        
+        // Check for duplicates
+        if (countryNames.has(item.country.toLowerCase())) {
+          duplicateCount++;
+          return false;
+        }
+        
+        // Add to tracking set if valid
+        countryNames.add(item.country.toLowerCase());
+        validCount++;
+        return true;
+      });
+      
+      // Build detailed validation message
+      let validationMessage = `${validCount} valid countries`;
+      const issues = [];
+      
+      if (invalidCount > 0) issues.push(`${invalidCount} invalid entries`);
+      if (emptyCount > 0) issues.push(`${emptyCount} empty objects`);
+      if (duplicateCount > 0) issues.push(`${duplicateCount} duplicates`);
+      
+      if (issues.length > 0) {
+        validationMessage += ` (removed: ${issues.join(", ")})`;
+      }
+      
       // Only proceed if we have valid data
-      if (countryData.length > 0) {
-        onDataUpdate(countryData);
+      if (validData.length > 0) {
+        onDataUpdate(validData);
+        
+        toast({
+          title: "Success",
+          description: `Map updated with ${validationMessage}`,
+          variant: "default",
+        });
       } else {
         toast({
           title: "Error",
-          description: "No valid data found to update the map",
+          description: "No valid country data found",
           variant: "destructive",
         });
       }
@@ -349,35 +245,18 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
               value={jsonInput}
               onChange={handleInputChange}
               className={`w-full bg-white border ${hasInputError ? 'border-red-500' : 'border-gray-300'} rounded p-2 text-sm font-mono h-64 shadow-sm transition-colors`}
-              placeholder={`{
-  "pubchemResults": {
-    "currentCompound": {
-      "cid": 23327,
-      "recordTitle": "D-Glutamic Acid",
-      "smile": "N[C@H](CCC(O)=O)C(=O)O"
-    },
-    "patents": [
-      {
-        "applications": [
-          {
-            "application_number": "JP2010544705A",
-            "country_code": "JP",
-            "filing_date": "2009-01-30",
-            "legal_status": "not_active"
-          },
-          {
-            "application_number": "US12/865,311",
-            "country_code": "US",
-            "filing_date": "2009-01-30",
-            "legal_status": "active"
-          }
-        ],
-        "country_code": "AU"
-      }
-    ]
+              placeholder={`[
+  {
+    "country": "United States",
+    "leagueStatus": "Premier",
+    "active": true
   },
-  "success": true
-}`}
+  {
+    "country": "Canada",
+    "leagueStatus": "Standard",
+    "active": true
+  }
+]`}
             ></textarea>
             
             {/* Error message display */}
@@ -399,47 +278,13 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
         
         {/* Schema Information */}
         <div className="mb-4 border border-gray-200 rounded p-3 bg-white shadow-sm">
-          <h3 className="text-sm font-medium mb-1">Supported Formats</h3>
-          
-          <div className="mt-2">
-            <h4 className="text-xs font-semibold mb-1">1. Standard Country Format</h4>
-            <div className="text-xs text-gray-600 font-mono bg-gray-50 p-2 rounded">
-              <p>{"{"}</p>
-              <p className="pl-2">"country": "String (required)",</p>
-              <p className="pl-2">"leagueStatus": "String (required)",</p>
-              <p className="pl-2">"active": "Boolean (required)"</p>
-              <p>{"}"}</p>
-            </div>
-          </div>
-          
-          <div className="mt-2">
-            <h4 className="text-xs font-semibold mb-1">2. Patent Application Format</h4>
-            <div className="text-xs text-gray-600 font-mono bg-gray-50 p-2 rounded">
-              <p>{"{"}</p>
-              <p className="pl-2">"application_number": "String",</p>
-              <p className="pl-2">"country_code": "String (required)",</p>
-              <p className="pl-2">"filing_date": "String",</p>
-              <p className="pl-2">"legal_status": "'active' | 'not_active' (required)"</p>
-              <p>{"}"}</p>
-            </div>
-          </div>
-          
-          <div className="mt-2">
-            <h4 className="text-xs font-semibold mb-1">3. PubChem API Response Format</h4>
-            <div className="text-xs text-gray-600 font-mono bg-gray-50 p-2 rounded">
-              <pre className="whitespace-pre-wrap">
-{`{
-  "pubchemResults": {
-    "currentCompound": { ... },
-    "patents": [
-      {
-        "applications": [ ... ]
-      }
-    ]
-  }
-}`}
-              </pre>
-            </div>
+          <h3 className="text-sm font-medium mb-1">Expected Format</h3>
+          <div className="text-xs text-gray-600 font-mono bg-gray-50 p-2 rounded">
+            <p>{"{"}</p>
+            <p className="pl-2">"country": "String (required)",</p>
+            <p className="pl-2">"leagueStatus": "String (required)",</p>
+            <p className="pl-2">"active": "Boolean (required)"</p>
+            <p>{"}"}</p>
           </div>
         </div>
         

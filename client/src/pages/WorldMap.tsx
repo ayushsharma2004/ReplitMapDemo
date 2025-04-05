@@ -5,41 +5,41 @@ import ToolbarHeader from "@/components/ToolbarHeader";
 import WorldMapVisualization from "@/components/WorldMapVisualization";
 import CountryDataPanel from "@/components/CountryDataPanel";
 import { useState } from "react";
-import { CountryData, PatentApplication, convertPatentApplicationsToCountryData } from "@shared/schema";
+import { CountryData } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
-// Sample patent application data based on the provided format
-const samplePatentData = (): CountryData[] => {
+// Define initial country data with validation
+const initializeCountryData = (): CountryData[] => {
   try {
-    // Use the sample data provided in the payload
-    const patentApplications: PatentApplication[] = [
-      { application_number: "JP2010544705A", country_code: "JP", filing_date: "2009-01-30", legal_status: "not_active" },
-      { application_number: "EP09705290.6A", country_code: "EP", filing_date: "2009-01-30", legal_status: "active" },
-      { application_number: "AU2009209601A", country_code: "AU", filing_date: "2009-01-30", legal_status: "active" },
-      { application_number: "PCT/EP2009/051041", country_code: "WO", filing_date: "2009-01-30", legal_status: "active" },
-      { application_number: "US12/865,311", country_code: "US", filing_date: "2009-01-30", legal_status: "active" },
-      { application_number: "ES200800243A", country_code: "ES", filing_date: "2008-01-30", legal_status: "not_active" }
+    const sampleCountryData: CountryData[] = [
+      { country: "United States", leagueStatus: "Premier", active: true },
+      { country: "Canada", leagueStatus: "Standard", active: true },
+      { country: "United Kingdom", leagueStatus: "Premier", active: true },
+      { country: "France", leagueStatus: "Premier", active: true },
+      { country: "Germany", leagueStatus: "Premier", active: true },
+      { country: "Japan", leagueStatus: "Standard", active: true },
+      { country: "Australia", leagueStatus: "Standard", active: true },
+      { country: "Brazil", leagueStatus: "Premier", active: true },
+      { country: "Russia", leagueStatus: "Basic", active: false },
+      { country: "India", leagueStatus: "Standard", active: true },
+      { country: "China", leagueStatus: "Basic", active: false },
+      { country: "South Africa", leagueStatus: "Standard", active: true },
+      { country: "Mexico", leagueStatus: "Standard", active: true },
+      { country: "Italy", leagueStatus: "Premier", active: true },
+      { country: "Spain", leagueStatus: "Premier", active: true }
     ];
     
-    // Convert patent applications to our country data format
-    return convertPatentApplicationsToCountryData(patentApplications);
+    // Validate each country has the required structure
+    return sampleCountryData.filter(country => 
+      country && 
+      typeof country.country === 'string' && 
+      typeof country.leagueStatus === 'string' && 
+      typeof country.active === 'boolean'
+    );
   } catch (error) {
-    console.error("Error initializing patent data:", error);
+    console.error("Error initializing country data:", error);
     return []; // Return empty array if there's any error
   }
-};
-
-// Initialize country data from the patent applications
-const initializeCountryData = (): CountryData[] => {
-  const countryData = samplePatentData();
-  
-  // Validate the converted data
-  return countryData.filter(country => 
-    country && 
-    typeof country.country === 'string' && 
-    typeof country.leagueStatus === 'string' && 
-    typeof country.active === 'boolean'
-  );
 };
 
 export default function WorldMap() {
