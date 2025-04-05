@@ -54,19 +54,37 @@ export default function PatentWorldMap({
   const countryStatusMap = React.useMemo(() => {
     const statusMap = new Map<string, boolean>();
     
+    // Add debug logging to see what data we're processing
+    console.log("Processing patent applications:", patentApplications);
+    
     patentApplications.forEach(application => {
+      const countryCode = application.country_code;
+      
+      // Convert two-letter country codes to ISO format for map matching
+      // EP (European Patent Office) and WO (WIPO) are special cases
+      const isoCountryCode = countryCode.length === 2 ? countryCode : null;
+      
+      if (!isoCountryCode && countryCode !== "EP" && countryCode !== "WO") {
+        console.warn(`Unsupported country code format: ${countryCode}`);
+        return;
+      }
+      
       // If the country is already marked as active, keep it active
-      if (statusMap.has(application.country_code) && statusMap.get(application.country_code)) {
+      if (statusMap.has(countryCode) && statusMap.get(countryCode)) {
         return;
       }
       
       // Set the country status based on the legal status
-      statusMap.set(
-        application.country_code, 
-        application.legal_status === "active"
-      );
+      const isActive = application.legal_status === "active";
+      statusMap.set(countryCode, isActive);
+      
+      // If this is an ISO country code, also add it in that format
+      if (isoCountryCode) {
+        statusMap.set(isoCountryCode, isActive);
+      }
     });
     
+    console.log("Processed country status map:", Array.from(statusMap.entries()));
     return statusMap;
   }, [patentApplications]);
 

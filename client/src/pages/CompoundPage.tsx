@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import ToolbarHeader from "@/components/ToolbarHeader";
 import PatentWorldMap from "@/components/PatentWorldMap";
+import DirectJsonUpload from "@/components/DirectJsonUpload";
 import { PatentResponse, PatentApplication } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
@@ -88,9 +89,23 @@ export default function CompoundPage() {
       
       const result = await response.json();
       console.log("Server processed data:", result);
+      
+      // Use the processed data returned from server
+      if (result.countries && Array.isArray(result.countries)) {
+        // Extract all applications for the sidebar
+        const allApplications = data.pubchemResults.patents.flatMap(patent => 
+          patent.applications || []
+        );
+        
+        setPatentApplications(allApplications);
+      }
     } catch (error) {
       console.error("Error sending data to server:", error);
-      // We don't show a toast here since we already loaded the data client-side
+      toast({
+        title: "Error",
+        description: "Failed to process patent data on the server. Using local processing instead.",
+        variant: "destructive",
+      });
     }
   };
   
@@ -246,6 +261,26 @@ export default function CompoundPage() {
                 Load Sample Data
               </button>
             </div>
+          </div>
+          
+          {/* DirectJsonUpload component */}
+          <div className="mx-4">
+            <DirectJsonUpload 
+              onDataLoaded={(data) => {
+                // Extract all patent applications
+                const allApplications = data.pubchemResults.patents.flatMap(patent => 
+                  patent.applications || []
+                );
+                
+                // Update state
+                setCompoundName(data.pubchemResults.currentCompound?.recordTitle || "Unknown Compound");
+                setPatentApplications(allApplications);
+                
+                // Send the data to the server as well
+                sendDataToServer(data);
+              }}
+              isLoading={isLoading}
+            />
           </div>
           
           <div className="flex-1 flex flex-col md:flex-row mx-4 mb-4 gap-4">
