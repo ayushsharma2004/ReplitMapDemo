@@ -10,7 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 
 // Map location configuration
 const MAP_INITIAL_POSITION = { coordinates: [0, 20], zoom: 1 };
-const MAP_URL = "https://raw.githubusercontent.com/deldersveld/topojson/master/world-countries.json";
+// Use a GeoJSON source for the world map that is reliable for this application
+const MAP_URL = "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
 
 // Country ISO code to name mapping (partial list)
 const COUNTRY_CODES: Record<string, string> = {
@@ -114,7 +115,7 @@ export default function PatentWorldMap({
   }, [isMapLoaded, loading, toast]);
 
   return (
-    <div className="relative flex-1 bg-white">
+    <div className="relative bg-white h-[500px] w-full">
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 z-10">
           <div className="flex flex-col items-center">
@@ -150,8 +151,9 @@ export default function PatentWorldMap({
           <Geographies geography={MAP_URL}>
             {({ geographies }: { geographies: Array<any> }) => 
               geographies.map((geo: any) => {
-                // Get the country code and check its status
-                const countryCode = geo.properties.iso_a2;
+                // Get the country code from the map source
+                // This GeoJSON uses the 'iso_a3' property for ISO country codes
+                const countryCode = geo.properties.iso_a3?.substr(0, 2);
                 
                 // Check if this country is in our data (using the ISO code)
                 const isActive = countryStatusMap.has(countryCode) 
@@ -180,6 +182,7 @@ export default function PatentWorldMap({
                       pressed: { outline: "none" }
                     }}
                     onMouseEnter={(event: React.MouseEvent) => {
+                      // Get country name from this specific GeoJSON format
                       const countryName = geo.properties.name;
                       const position = { x: event.clientX, y: event.clientY };
                       

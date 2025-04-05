@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import ToolbarHeader from "@/components/ToolbarHeader";
-import PatentWorldMap from "@/components/PatentWorldMap";
+import SimpleWorldMap from "@/components/SimpleWorldMap";
 import DirectJsonUpload from "@/components/DirectJsonUpload";
+import PatentCountryTooltip from "@/components/PatentCountryTooltip";
 import { PatentResponse, PatentApplication } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
@@ -13,6 +14,11 @@ export default function CompoundPage() {
   const [patentApplications, setPatentApplications] = useState<PatentApplication[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isMapLoaded, setIsMapLoaded] = useState<boolean>(false);
+  const [tooltipData, setTooltipData] = useState<{
+    countryName: string;
+    isActive: boolean;
+    position: { x: number; y: number } | null;
+  } | null>(null);
   
   // Function to handle the JSON data upload
   const handleDataUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -292,12 +298,26 @@ export default function CompoundPage() {
                 </p>
               </div>
               
-              <div className="flex-1 relative min-h-[400px]">
-                <PatentWorldMap 
+              <div className="w-full h-[500px] relative">
+                <SimpleWorldMap 
                   patentApplications={patentApplications}
                   loading={isLoading}
                   onMapLoaded={() => setIsMapLoaded(true)}
+                  onCountryHover={(countryName, isActive, position) => {
+                    if (countryName) {
+                      setTooltipData({ countryName, isActive, position });
+                    } else {
+                      setTooltipData(null);
+                    }
+                  }}
                 />
+                {tooltipData && (
+                  <PatentCountryTooltip
+                    countryName={tooltipData.countryName}
+                    isActive={tooltipData.isActive}
+                    position={tooltipData.position}
+                  />
+                )}
               </div>
             </div>
             
