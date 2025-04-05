@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import ToolbarHeader from "@/components/ToolbarHeader";
-import SimpleWorldMap from "@/components/SimpleWorldMap";
+import EnhancedWorldMap from "@/components/EnhancedWorldMap";
 import DirectJsonUpload from "@/components/DirectJsonUpload";
 import PatentCountryTooltip from "@/components/PatentCountryTooltip";
 import { PatentResponse, PatentApplication } from "@shared/schema";
@@ -299,11 +299,11 @@ export default function CompoundPage() {
               </div>
               
               <div className="w-full h-[500px] relative">
-                <SimpleWorldMap 
+                <EnhancedWorldMap 
                   patentApplications={patentApplications}
                   loading={isLoading}
                   onMapLoaded={() => setIsMapLoaded(true)}
-                  onCountryHover={(countryName, isActive, position) => {
+                  onCountryHover={(countryName: string, isActive: boolean, position: { x: number, y: number }) => {
                     if (countryName) {
                       setTooltipData({ countryName, isActive, position });
                     } else {
