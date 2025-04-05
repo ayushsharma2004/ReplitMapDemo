@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import ToolbarHeader from "@/components/ToolbarHeader";
-import EnhancedWorldMap from "@/components/EnhancedWorldMap";
+import ProperWorldMap from "@/components/ProperWorldMap";
 import DirectJsonUpload from "@/components/DirectJsonUpload";
 import PatentCountryTooltip from "@/components/PatentCountryTooltip";
 import { PatentResponse, PatentApplication } from "@shared/schema";
