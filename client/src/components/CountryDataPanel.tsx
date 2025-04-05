@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { CountryData, countrySchema } from "@shared/schema";
+import { CountryData, countrySchema, PatentApplication, convertPatentApplicationsToCountryData } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 interface CountryDataPanelProps {
@@ -121,85 +121,144 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
       if (!Array.isArray(parsedData)) {
         toast({
           title: "Error",
-          description: "Data must be an array of country objects",
+          description: "Data must be an array",
           variant: "destructive",
         });
         return;
       }
       
-      // Initialize counters for validation reporting
-      let validCount = 0;
-      let invalidCount = 0;
-      let emptyCount = 0;
-      let duplicateCount = 0;
+      // Determine if the data is patent applications or country data format
+      const isPatentFormat = parsedData.length > 0 && 
+        typeof parsedData[0] === 'object' && 
+        parsedData[0] !== null &&
+        'country_code' in parsedData[0] && 
+        'legal_status' in parsedData[0];
       
-      // Track country names to check for duplicates
-      const countryNames = new Set<string>();
+      let countryData: CountryData[] = [];
       
-      // Validate each country object has the required fields
-      const validData = parsedData.filter(item => {
-        // Skip null or non-object items
-        if (!item || typeof item !== 'object') {
-          invalidCount++;
-          return false;
+      if (isPatentFormat) {
+        // Handle patent application format
+        try {
+          // Validate patent format
+          const validPatentData = parsedData.filter(item => 
+            item && 
+            typeof item === 'object' &&
+            typeof item.country_code === 'string' && 
+            typeof item.legal_status === 'string' &&
+            (item.legal_status === 'active' || item.legal_status === 'not_active')
+          );
+          
+          if (validPatentData.length === 0) {
+            toast({
+              title: "Error",
+              description: "No valid patent application data found",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          // Convert patent applications to our country data format
+          countryData = convertPatentApplicationsToCountryData(validPatentData as PatentApplication[]);
+          
+          toast({
+            title: "Success",
+            description: `Converted ${validPatentData.length} patent applications to ${countryData.length} countries`,
+            variant: "default",
+          });
+        } catch (error) {
+          console.error("Error converting patent data:", error);
+          toast({
+            title: "Error",
+            description: "Failed to process patent application data",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else {
+        // Handle direct country data format
+        // Initialize counters for validation reporting
+        let validCount = 0;
+        let invalidCount = 0;
+        let emptyCount = 0;
+        let duplicateCount = 0;
+        
+        // Track country names to check for duplicates
+        const countryNames = new Set<string>();
+        
+        // Validate each country object has the required fields
+        countryData = parsedData.filter(item => {
+          // Skip null or non-object items
+          if (!item || typeof item !== 'object') {
+            invalidCount++;
+            return false;
+          }
+          
+          // Skip empty objects
+          if (Object.keys(item).length === 0) {
+            emptyCount++;
+            return false;
+          }
+          
+          // Check required properties
+          const isValid = (
+            typeof item.country === 'string' && 
+            item.country.trim() !== '' &&
+            typeof item.leagueStatus === 'string' && 
+            typeof item.active === 'boolean'
+          );
+          
+          if (!isValid) {
+            invalidCount++;
+            return false;
+          }
+          
+          // Check for duplicates
+          if (countryNames.has(item.country.toLowerCase())) {
+            duplicateCount++;
+            return false;
+          }
+          
+          // Add to tracking set if valid
+          countryNames.add(item.country.toLowerCase());
+          validCount++;
+          return true;
+        });
+        
+        // Build detailed validation message
+        let validationMessage = `${validCount} valid countries`;
+        const issues = [];
+        
+        if (invalidCount > 0) issues.push(`${invalidCount} invalid entries`);
+        if (emptyCount > 0) issues.push(`${emptyCount} empty objects`);
+        if (duplicateCount > 0) issues.push(`${duplicateCount} duplicates`);
+        
+        if (issues.length > 0) {
+          validationMessage += ` (removed: ${issues.join(", ")})`;
         }
         
-        // Skip empty objects
-        if (Object.keys(item).length === 0) {
-          emptyCount++;
-          return false;
+        if (countryData.length > 0) {
+          toast({
+            title: "Success",
+            description: `Map updated with ${validationMessage}`,
+            variant: "default",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "No valid country data found",
+            variant: "destructive",
+          });
+          return;
         }
-        
-        // Check required properties
-        const isValid = (
-          typeof item.country === 'string' && 
-          item.country.trim() !== '' &&
-          typeof item.leagueStatus === 'string' && 
-          typeof item.active === 'boolean'
-        );
-        
-        if (!isValid) {
-          invalidCount++;
-          return false;
-        }
-        
-        // Check for duplicates
-        if (countryNames.has(item.country.toLowerCase())) {
-          duplicateCount++;
-          return false;
-        }
-        
-        // Add to tracking set if valid
-        countryNames.add(item.country.toLowerCase());
-        validCount++;
-        return true;
-      });
-      
-      // Build detailed validation message
-      let validationMessage = `${validCount} valid countries`;
-      const issues = [];
-      
-      if (invalidCount > 0) issues.push(`${invalidCount} invalid entries`);
-      if (emptyCount > 0) issues.push(`${emptyCount} empty objects`);
-      if (duplicateCount > 0) issues.push(`${duplicateCount} duplicates`);
-      
-      if (issues.length > 0) {
-        validationMessage += ` (removed: ${issues.join(", ")})`;
       }
       
       // Only proceed if we have valid data
-      if (validData.length > 0) {
-        onDataUpdate(validData);
-        
-        toast({
-          title: "Success",
-          description: `Map updated with ${validationMessage}`,
-          variant: "default",
-        });
+      if (countryData.length > 0) {
+        onDataUpdate(countryData);
       } else {
         toast({
           title: "Error",
-          description: "No valid country data found",
+          description: "No valid data found to update the map",
           variant: "destructive",
         });
       }
@@ -247,14 +306,16 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
               className={`w-full bg-white border ${hasInputError ? 'border-red-500' : 'border-gray-300'} rounded p-2 text-sm font-mono h-64 shadow-sm transition-colors`}
               placeholder={`[
   {
-    "country": "United States",
-    "leagueStatus": "Premier",
-    "active": true
+    "application_number": "US12345678",
+    "country_code": "US",
+    "filing_date": "2020-01-15",
+    "legal_status": "active"
   },
   {
-    "country": "Canada",
-    "leagueStatus": "Standard",
-    "active": true
+    "application_number": "EP87654321",
+    "country_code": "EP",
+    "filing_date": "2018-06-30",
+    "legal_status": "not_active"
   }
 ]`}
             ></textarea>
@@ -278,13 +339,29 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
         
         {/* Schema Information */}
         <div className="mb-4 border border-gray-200 rounded p-3 bg-white shadow-sm">
-          <h3 className="text-sm font-medium mb-1">Expected Format</h3>
-          <div className="text-xs text-gray-600 font-mono bg-gray-50 p-2 rounded">
-            <p>{"{"}</p>
-            <p className="pl-2">"country": "String (required)",</p>
-            <p className="pl-2">"leagueStatus": "String (required)",</p>
-            <p className="pl-2">"active": "Boolean (required)"</p>
-            <p>{"}"}</p>
+          <h3 className="text-sm font-medium mb-1">Supported Formats</h3>
+          
+          <div className="mt-2">
+            <h4 className="text-xs font-semibold mb-1">1. Standard Country Format</h4>
+            <div className="text-xs text-gray-600 font-mono bg-gray-50 p-2 rounded">
+              <p>{"{"}</p>
+              <p className="pl-2">"country": "String (required)",</p>
+              <p className="pl-2">"leagueStatus": "String (required)",</p>
+              <p className="pl-2">"active": "Boolean (required)"</p>
+              <p>{"}"}</p>
+            </div>
+          </div>
+          
+          <div className="mt-2">
+            <h4 className="text-xs font-semibold mb-1">2. Patent Application Format</h4>
+            <div className="text-xs text-gray-600 font-mono bg-gray-50 p-2 rounded">
+              <p>{"{"}</p>
+              <p className="pl-2">"application_number": "String",</p>
+              <p className="pl-2">"country_code": "String (required)",</p>
+              <p className="pl-2">"filing_date": "String",</p>
+              <p className="pl-2">"legal_status": "'active' | 'not_active' (required)"</p>
+              <p>{"}"}</p>
+            </div>
           </div>
         </div>
         
