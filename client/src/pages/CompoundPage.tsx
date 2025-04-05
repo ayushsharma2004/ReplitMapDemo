@@ -5,8 +5,9 @@ import ToolbarHeader from "@/components/ToolbarHeader";
 import CompoundVisualizer from "@/components/CompoundVisualizer";
 import CompoundDetails from "@/components/CompoundDetails";
 import PatentList from "@/components/PatentList";
+import PatentWorldMap from "@/components/PatentWorldMap";
 import { useToast } from "@/hooks/use-toast";
-import { CompoundData, Compound, SimilarCompound, Patent } from "@shared/schema";
+import { CompoundData, Compound, SimilarCompound, Patent, PatentApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function CompoundPage() {
@@ -89,6 +90,9 @@ export default function CompoundPage() {
     );
   }
 
+  // Extract all patent applications from patents
+  const allPatentApplications = patents.flatMap(patent => patent.applications || []);
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
@@ -121,6 +125,15 @@ export default function CompoundPage() {
               <PatentList
                 patents={patents}
               />
+            </div>
+            
+            {/* Patent World Map - Full width */}
+            <div className="lg:col-span-3 bg-white rounded-lg shadow-sm p-4 h-[400px]">
+              <h2 className="text-xl font-semibold mb-2">Patent Applications World Map</h2>
+              <p className="text-sm text-muted-foreground mb-4">Countries with active patent applications are highlighted in blue.</p>
+              <div className="h-[300px]">
+                <PatentWorldMap patentApplications={allPatentApplications} />
+              </div>
             </div>
           </div>
         </div>
