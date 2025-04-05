@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { CountryData } from "@shared/schema";
+import React, { useState, useEffect } from "react";
+import { CountryData, countrySchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 interface CountryDataPanelProps {
@@ -12,15 +12,112 @@ interface CountryDataPanelProps {
 }
 
 export default function CountryDataPanel({ countryData, onDataUpdate, stats }: CountryDataPanelProps) {
-  const [jsonInput, setJsonInput] = useState<string>(JSON.stringify(countryData, null, 2));
+  const [jsonInput, setJsonInput] = useState<string>("");
+  const [hasInputError, setHasInputError] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const { toast } = useToast();
 
-  const handleApplyData = () => {
+  // Initialize JSON input safely when countryData changes
+  useEffect(() => {
     try {
-      // Attempt to parse the JSON data
+      if (Array.isArray(countryData) && countryData.length > 0) {
+        setJsonInput(JSON.stringify(countryData, null, 2));
+        setHasInputError(false);
+        setErrorMessage("");
+      }
+    } catch (error) {
+      console.error("Error stringifying country data:", error);
+      // Don't update the textarea if there's an error to avoid losing user input
+    }
+  }, [countryData]);
+
+  // Validate JSON input as user types
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const input = e.target.value;
+    setJsonInput(input);
+    
+    // Only validate if there's actual content
+    if (input.trim().length === 0) {
+      setHasInputError(false);
+      setErrorMessage("");
+      return;
+    }
+    
+    try {
+      JSON.parse(input);
+      setHasInputError(false);
+      setErrorMessage("");
+    } catch (error) {
+      setHasInputError(true);
+      setErrorMessage("Invalid JSON format");
+    }
+  };
+
+  // Format the JSON in the textarea
+  const handleFormatJSON = () => {
+    try {
+      const parsed = JSON.parse(jsonInput);
+      setJsonInput(JSON.stringify(parsed, null, 2));
+      setHasInputError(false);
+      setErrorMessage("");
+      
+      toast({
+        title: "Success",
+        description: "JSON formatted successfully",
+        variant: "default",
+      });
+    } catch (error) {
+      setHasInputError(true);
+      setErrorMessage("Cannot format invalid JSON");
+      
+      toast({
+        title: "Error",
+        description: "Invalid JSON format. Please correct the syntax errors.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Reset to original data
+  const handleResetData = () => {
+    try {
+      if (Array.isArray(countryData)) {
+        setJsonInput(JSON.stringify(countryData, null, 2));
+        setHasInputError(false);
+        setErrorMessage("");
+        
+        toast({
+          title: "Reset Complete",
+          description: "Data has been reset to the original values",
+          variant: "default",
+        });
+      }
+    } catch (error) {
+      console.error("Error resetting data:", error);
+      toast({
+        title: "Error",
+        description: "Could not reset data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Apply the JSON data to the map with enhanced validation
+  const handleApplyData = () => {
+    if (hasInputError) {
+      toast({
+        title: "Error",
+        description: "Please fix the JSON syntax errors before applying",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      // Try to parse the JSON
       const parsedData = JSON.parse(jsonInput);
       
-      // Validate that the parsed data is an array
+      // Check if it's an array
       if (!Array.isArray(parsedData)) {
         toast({
           title: "Error",
@@ -30,24 +127,64 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
         return;
       }
       
+      // Initialize counters for validation reporting
+      let validCount = 0;
+      let invalidCount = 0;
+      let emptyCount = 0;
+      let duplicateCount = 0;
+      
+      // Track country names to check for duplicates
+      const countryNames = new Set<string>();
+      
       // Validate each country object has the required fields
       const validData = parsedData.filter(item => {
-        return (
-          item && 
-          typeof item === 'object' && 
+        // Skip null or non-object items
+        if (!item || typeof item !== 'object') {
+          invalidCount++;
+          return false;
+        }
+        
+        // Skip empty objects
+        if (Object.keys(item).length === 0) {
+          emptyCount++;
+          return false;
+        }
+        
+        // Check required properties
+        const isValid = (
           typeof item.country === 'string' && 
+          item.country.trim() !== '' &&
           typeof item.leagueStatus === 'string' && 
           typeof item.active === 'boolean'
         );
+        
+        if (!isValid) {
+          invalidCount++;
+          return false;
+        }
+        
+        // Check for duplicates
+        if (countryNames.has(item.country.toLowerCase())) {
+          duplicateCount++;
+          return false;
+        }
+        
+        // Add to tracking set if valid
+        countryNames.add(item.country.toLowerCase());
+        validCount++;
+        return true;
       });
       
-      // Check if any items were filtered out due to validation
-      if (validData.length !== parsedData.length) {
-        toast({
-          title: "Warning",
-          description: `${parsedData.length - validData.length} invalid entries were removed`,
-          variant: "default",
-        });
+      // Build detailed validation message
+      let validationMessage = `${validCount} valid countries`;
+      const issues = [];
+      
+      if (invalidCount > 0) issues.push(`${invalidCount} invalid entries`);
+      if (emptyCount > 0) issues.push(`${emptyCount} empty objects`);
+      if (duplicateCount > 0) issues.push(`${duplicateCount} duplicates`);
+      
+      if (issues.length > 0) {
+        validationMessage += ` (removed: ${issues.join(", ")})`;
       }
       
       // Only proceed if we have valid data
@@ -56,7 +193,7 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
         
         toast({
           title: "Success",
-          description: `Map updated with ${validData.length} countries`,
+          description: `Map updated with ${validationMessage}`,
           variant: "default",
         });
       } else {
@@ -83,12 +220,31 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
         
         {/* Data input section */}
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Country Data (JSON)</label>
+          <div className="flex justify-between items-center mb-2">
+            <label className="text-sm font-medium">Country Data (JSON)</label>
+            <div className="flex space-x-1">
+              <button 
+                onClick={handleFormatJSON}
+                className="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
+                title="Format JSON"
+              >
+                Format
+              </button>
+              <button 
+                onClick={handleResetData}
+                className="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
+                title="Reset to original data"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+          
           <div className="relative">
             <textarea 
               value={jsonInput}
-              onChange={(e) => setJsonInput(e.target.value)}
-              className="w-full bg-white border border-gray-300 rounded p-2 text-sm font-mono h-64 shadow-sm"
+              onChange={handleInputChange}
+              className={`w-full bg-white border ${hasInputError ? 'border-red-500' : 'border-gray-300'} rounded p-2 text-sm font-mono h-64 shadow-sm transition-colors`}
               placeholder={`[
   {
     "country": "United States",
@@ -102,14 +258,35 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
   }
 ]`}
             ></textarea>
+            
+            {/* Error message display */}
+            {hasInputError && (
+              <div className="text-xs text-red-500 mt-1 pl-1">
+                {errorMessage || "Invalid JSON format"}
+              </div>
+            )}
           </div>
         </div>
         
         <button 
           onClick={handleApplyData}
-          className="w-full bg-primary hover:bg-primary/90 text-white font-medium rounded px-4 py-2 mb-4 shadow-sm">
+          disabled={hasInputError}
+          className={`w-full ${hasInputError ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-primary/90'} text-white font-medium rounded px-4 py-2 mb-4 shadow-sm transition-colors`}
+        >
           Apply Data to Map
         </button>
+        
+        {/* Schema Information */}
+        <div className="mb-4 border border-gray-200 rounded p-3 bg-white shadow-sm">
+          <h3 className="text-sm font-medium mb-1">Expected Format</h3>
+          <div className="text-xs text-gray-600 font-mono bg-gray-50 p-2 rounded">
+            <p>{"{"}</p>
+            <p className="pl-2">"country": "String (required)",</p>
+            <p className="pl-2">"leagueStatus": "String (required)",</p>
+            <p className="pl-2">"active": "Boolean (required)"</p>
+            <p>{"}"}</p>
+          </div>
+        </div>
         
         {/* Map Legend */}
         <div className="border border-gray-200 rounded p-3 bg-white shadow-sm">
@@ -136,11 +313,11 @@ export default function CountryDataPanel({ countryData, onDataUpdate, stats }: C
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-white p-3 rounded shadow-sm border border-gray-200">
               <div className="text-xs text-gray-500">Total Countries</div>
-              <div className="text-lg font-semibold">{stats.totalCountries}</div>
+              <div className="text-lg font-semibold">{stats.totalCountries || 0}</div>
             </div>
             <div className="bg-white p-3 rounded shadow-sm border border-gray-200">
               <div className="text-xs text-gray-500">Active Countries</div>
-              <div className="text-lg font-semibold text-primary">{stats.activeCountries}</div>
+              <div className="text-lg font-semibold text-primary">{stats.activeCountries || 0}</div>
             </div>
           </div>
         </div>
