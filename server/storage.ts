@@ -1,4 +1,10 @@
-import { users, type User, type InsertUser, type CountryData } from "@shared/schema";
+import { 
+  users, 
+  type User, 
+  type InsertUser, 
+  type CompoundData, 
+  type PubChemResults 
+} from "@shared/schema";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -7,35 +13,90 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  getCountries(): CountryData[];
-  updateCountries(countries: CountryData[]): CountryData[];
+  getCompoundData(): CompoundData | undefined;
+  updateCompoundData(data: CompoundData): CompoundData | undefined;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
-  private countries: CountryData[];
+  private compoundData: CompoundData | undefined;
   currentId: number;
 
   constructor() {
     this.users = new Map();
     this.currentId = 1;
-    this.countries = [
-      { country: "United States", leagueStatus: "Premier", active: true },
-      { country: "Canada", leagueStatus: "Standard", active: true },
-      { country: "United Kingdom", leagueStatus: "Premier", active: true },
-      { country: "France", leagueStatus: "Premier", active: true },
-      { country: "Germany", leagueStatus: "Premier", active: true },
-      { country: "Japan", leagueStatus: "Standard", active: true },
-      { country: "Australia", leagueStatus: "Standard", active: true },
-      { country: "Brazil", leagueStatus: "Premier", active: true },
-      { country: "Russia", leagueStatus: "Basic", active: false },
-      { country: "India", leagueStatus: "Standard", active: true },
-      { country: "China", leagueStatus: "Basic", active: false },
-      { country: "South Africa", leagueStatus: "Standard", active: true },
-      { country: "Mexico", leagueStatus: "Standard", active: true },
-      { country: "Italy", leagueStatus: "Premier", active: true },
-      { country: "Spain", leagueStatus: "Premier", active: true }
-    ];
+    
+    // Initial compound data
+    this.compoundData = {
+      pubchemResults: {
+        currentCompound: {
+          cid: 23327,
+          recordTitle: "D-Glutamic Acid",
+          smile: "N[C@H](CCC(O)=O)C(=O)O"
+        },
+        patents: [
+          {
+            applications: [
+              {
+                application_number: "JP2010544705A",
+                country_code: "JP",
+                filing_date: "2009-01-30",
+                legal_status: "not_active"
+              },
+              {
+                application_number: "EP09705290.6A",
+                country_code: "EP",
+                filing_date: "2009-01-30",
+                legal_status: "active"
+              },
+              {
+                application_number: "AU2009209601A",
+                country_code: "AU",
+                filing_date: "2009-01-30",
+                legal_status: "active"
+              },
+              {
+                application_number: "PCT/EP2009/051041",
+                country_code: "WO",
+                filing_date: "2009-01-30",
+                legal_status: "active"
+              },
+              {
+                application_number: "US12/865,311",
+                country_code: "US",
+                filing_date: "2009-01-30",
+                legal_status: "active"
+              },
+              {
+                application_number: "ES200800243A",
+                country_code: "ES",
+                filing_date: "2008-01-30",
+                legal_status: "not_active"
+              }
+            ],
+            country_code: "AU",
+            country_name: "Australia",
+            expiration_date: "2029-01-30",
+            kind_code: "B2",
+            patent_id: "AU-2009209601-B2",
+            patent_number: "-2009209601-",
+            patent_status: "Active",
+            source: "PubChem",
+            url: "https://patents.google.com/?q=AU-2009209601-B2"
+          }
+        ],
+        similarCompound: [
+          {
+            cid: 33032,
+            iupacName: "(2S)-2-aminopentanedioic acid",
+            recordTitle: "Glutamic Acid",
+            similarity_score: 0.0,
+            smile: "C(CC(=O)O)[C@@H](C(=O)O)N"
+          }
+        ]
+      },
+      success: true
+    };
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -55,54 +116,37 @@ export class MemStorage implements IStorage {
     return user;
   }
 
-  getCountries(): CountryData[] {
+  getCompoundData(): CompoundData | undefined {
     try {
-      // Create a defensive copy of the data to avoid external modification
-      if (!this.countries || !Array.isArray(this.countries)) {
-        console.error("Invalid countries data structure");
-        return [];
+      if (!this.compoundData) {
+        console.error("No compound data available");
+        return undefined;
       }
       
-      // Return only valid country objects
-      return [...this.countries].filter(country => 
-        country && 
-        typeof country.country === 'string' && 
-        typeof country.leagueStatus === 'string' && 
-        typeof country.active === 'boolean'
-      );
+      // Return a defensive copy to avoid external modification
+      return JSON.parse(JSON.stringify(this.compoundData));
     } catch (error) {
-      console.error("Error retrieving countries:", error);
-      return []; // Return empty array on error
+      console.error("Error retrieving compound data:", error);
+      return undefined;
     }
   }
 
-  updateCountries(countries: CountryData[]): CountryData[] {
+  updateCompoundData(data: CompoundData): CompoundData | undefined {
     try {
-      // Validate input is an array
-      if (!countries || !Array.isArray(countries)) {
-        console.error("Invalid data provided: not an array");
-        return this.getCountries(); // Return current data
+      // Basic validation
+      if (!data || !data.pubchemResults || !data.pubchemResults.currentCompound) {
+        console.error("Invalid compound data structure");
+        return this.getCompoundData();
       }
       
-      // Filter out invalid country objects
-      const validCountries = countries.filter(country => 
-        country && 
-        typeof country.country === 'string' && 
-        typeof country.leagueStatus === 'string' && 
-        typeof country.active === 'boolean'
-      );
+      // Additional validation could be added here
       
-      if (validCountries.length === 0) {
-        console.warn("No valid country data provided for update");
-        return this.getCountries(); // Return current data
-      }
-      
-      // Update with validated data
-      this.countries = [...validCountries];
-      return this.getCountries();
+      // Update data with a defensive copy
+      this.compoundData = JSON.parse(JSON.stringify(data));
+      return this.getCompoundData();
     } catch (error) {
-      console.error("Error updating countries:", error);
-      return this.getCountries(); // Return current data on error
+      console.error("Error updating compound data:", error);
+      return this.getCompoundData();
     }
   }
 }
